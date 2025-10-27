@@ -36,7 +36,7 @@ Or add it manually to your project file:
 
 ### 1. Create Endpoint Classes
 
-Create classes that implement the `IMapEndpoint` interface:
+Create classes that implement the `IMapEndpoint` interface (needs a constructor without parameters):
 
 ```csharp
 using Svrooij.EndpointMapper;
