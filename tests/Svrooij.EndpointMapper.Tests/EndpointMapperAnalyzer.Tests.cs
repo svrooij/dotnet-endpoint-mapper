@@ -112,7 +112,7 @@ public class EndpointMapperAnalyzerTests
     private async Task<ImmutableArray<Diagnostic>> RunAnalyzer(string sourceCode)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-        
+
         // Create basic references
         var references = new List<MetadataReference>
         {

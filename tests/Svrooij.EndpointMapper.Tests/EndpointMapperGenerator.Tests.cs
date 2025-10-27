@@ -60,7 +60,7 @@ public class EndpointMapperGeneratorTests
         // Assert - Verify only IMapEndpoint interface is generated, no extension method
         var generatedSources = result.Results[0].GeneratedSources;
         await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(1); // Should still at least generate IMapEndpoint.g.cs
-        
+
         var interfaceSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("IMapEndpoint"));
         await Assert.That(interfaceSource.SourceText).IsNotNull();
 
@@ -119,24 +119,24 @@ public class EndpointMapperGeneratorTests
         // Assert - Verify both IMapEndpoint interface and extension method are generated
         var generatedSources = result.Results[0].GeneratedSources;
         await Assert.That(generatedSources.Length).IsEqualTo(2); // IMapEndpoint.g.cs + EndpointMapperExtensions.g.cs
-        
+
         // Verify interface is generated
         var interfaceSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("IMapEndpoint"));
         await Assert.That(interfaceSource.SourceText).IsNotNull();
-        
+
         // Verify extension method is generated
         var extensionSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("EndpointMapperExtensions"));
         await Assert.That(extensionSource.SourceText).IsNotNull();
-        
+
         var extensionText = extensionSource.SourceText.ToString();
         await Assert.That(extensionText).Contains("MapEndpointsFromTestProject");
         await Assert.That(extensionText).Contains("public static WebApplication MapEndpointsFromTestProject(this WebApplication app)");
-        
+
         // Verify all three endpoint classes are registered
         await Assert.That(extensionText).Contains("new TestProject.Endpoints.WeatherEndpoint().MapEndpoint(app);");
         await Assert.That(extensionText).Contains("new TestProject.Endpoints.UserEndpoint().MapEndpoint(app);");
         await Assert.That(extensionText).Contains("new TestProject.Other.ProductEndpoint().MapEndpoint(app);");
-        
+
         await Assert.That(extensionText).Contains("return app;");
     }
 
@@ -169,15 +169,15 @@ public class EndpointMapperGeneratorTests
         // Assert - Verify both IMapEndpoint interface and extension method are generated
         var generatedSources = result.Results[0].GeneratedSources;
         await Assert.That(generatedSources.Length).IsEqualTo(2); // IMapEndpoint.g.cs + EndpointMapperExtensions.g.cs
-        
+
         // Verify interface is generated
         var interfaceSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("IMapEndpoint"));
         await Assert.That(interfaceSource.SourceText).IsNotNull();
-        
+
         // Verify extension method is generated
         var extensionSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("EndpointMapperExtensions"));
         await Assert.That(extensionSource.SourceText).IsNotNull();
-        
+
         var extensionText = extensionSource.SourceText.ToString();
         await Assert.That(extensionText).Contains("MapEndpointsFromTestProject");
         await Assert.That(extensionText).Contains("public static WebApplication MapEndpointsFromTestProject(this WebApplication app)");

@@ -64,7 +64,7 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
     {
         // If no constructors are explicitly declared, C# provides an implicit parameterless constructor
         var constructors = classSymbol.Constructors.Where(c => !c.IsStatic).ToArray();
-        
+
         if (constructors.Length == 0)
             return true; // Implicit parameterless constructor
 

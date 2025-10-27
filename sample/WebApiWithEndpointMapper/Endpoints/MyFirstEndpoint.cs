@@ -4,12 +4,12 @@ namespace WebApiWithEndpointMapper.Endpoints;
 // For the source generator to work, this class must have a parameterless constructor (the default if no constructors are defined)
 public class MyFirstEndpoint : Svrooij.EndpointMapper.IMapEndpoint
 {
-  public void MapEndpoint(IEndpointRouteBuilder app)
-  {
-    // Define your endpoint(s) here.
-    // I would recommend using just a single endpoint per class for clarity
-    app
-      .MapGet("/myfirstendpoint", () => "Hello from MyFirstEndpoint!")
-      .WithOpenApi();
-  }
+    public void MapEndpoint(IEndpointRouteBuilder app)
+    {
+        // Define your endpoint(s) here.
+        // I would recommend using just a single endpoint per class for clarity
+        app
+          .MapGet("/myfirstendpoint", () => "Hello from MyFirstEndpoint!")
+          .WithOpenApi();
+    }
 }
