@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis;
@@ -34,7 +34,7 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
 
         var endpointMapperDeclarations = context.SyntaxProvider
           .CreateSyntaxProvider(
-            predicate: static (s, _) => IsSyntaxTargetForGeneration(s),
+            predicate: static (s, _) => IsSyntaxTargetForEndpointMapperGeneration(s),
             transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
           .Where(static m => m is not null);
 
@@ -43,13 +43,33 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(compilationAndMappings, static (spc, source) =>
         {
             var (compilation, mappings) = source;
-            Execute(compilation, mappings!, spc);
+            AddMappedEndpointsSource(compilation, mappings!, spc);
+        });
+
+
+        var selectDtoDeclarations = context.SyntaxProvider
+          .CreateSyntaxProvider(
+            predicate: static (s, _) => IsSyntaxTargetForGenerateSelectGeneration(s),
+            transform: static (ctx, _) => GetSemanticTargetForGenerateSelectGeneration(ctx))
+          .Where(static m => m is not null);
+
+        var compilationAndSelectDtos = context.CompilationProvider.Combine(selectDtoDeclarations.Collect());
+
+        context.RegisterSourceOutput(compilationAndSelectDtos, static (spc, source) =>
+        {
+            var (compilation, selectDtos) = source;
+            ExecuteSelectDtoGeneration(compilation, selectDtos!, spc);
         });
     }
 
-    private static bool IsSyntaxTargetForGeneration(SyntaxNode node)
+    private static bool IsSyntaxTargetForEndpointMapperGeneration(SyntaxNode node)
     {
-        return node is ClassDeclarationSyntax classDeclaration && classDeclaration.BaseList != null;
+        if (node is not ClassDeclarationSyntax classDeclaration || classDeclaration.BaseList == null)
+            return false;
+
+        // Check if any base type has "IMapEndpoint" name at syntax level
+        return classDeclaration.BaseList.Types.Any(baseType =>
+            baseType.Type.ToString().Contains("IMapEndpoint"));
     }
 
     private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
@@ -68,7 +88,58 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         return implementsIMapEndpoint ? classSymbol : null;
     }
 
-    private static void Execute(Compilation compilation, ImmutableArray<INamedTypeSymbol> endpointClasses, SourceProductionContext context)
+    private static bool IsSyntaxTargetForGenerateSelectGeneration(SyntaxNode node)
+    {
+        if (node is not ClassDeclarationSyntax classDeclaration || classDeclaration.AttributeLists.Count == 0)
+            return false;
+
+        // Check if any attribute starts with "GenerateSelect" at syntax level
+        return classDeclaration.AttributeLists.Any(attrList =>
+            attrList.Attributes.Any(attr =>
+            {
+                var attrName = attr.Name.ToString();
+                return attrName == "GenerateSelect" ||
+                       attrName == "GenerateSelectAttribute" ||
+                       attrName.EndsWith(".GenerateSelect") ||
+                       attrName.EndsWith(".GenerateSelectAttribute");
+            }));
+    }
+
+    private static INamedTypeSymbol? GetSemanticTargetForGenerateSelectGeneration(GeneratorSyntaxContext context)
+    {
+        var classDeclaration = (ClassDeclarationSyntax)context.Node;
+        var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
+
+        if (classSymbol == null)
+            return null;
+
+        // Check if the class has the GenerateSelect attribute
+        var hasGenerateSelectAttribute = classSymbol.GetAttributes().Any(attr =>
+            attr.AttributeClass?.Name == "GenerateSelectAttribute" &&
+            attr.AttributeClass?.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
+
+        return hasGenerateSelectAttribute ? classSymbol : null;
+    }
+
+    private static string NormalizeIdentifier(string input)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in input)
+        {
+            if (char.IsLetterOrDigit(c))
+                sb.Append(c);
+            else if (c == '.' || c == '-' || c == '_')
+                sb.Append('_');
+        }
+
+        var result = sb.ToString();
+        if (result.Length == 0 || !char.IsLetter(result[0]))
+            result = "Project" + result;
+
+        return result;
+    }
+
+    private static void AddMappedEndpointsSource(Compilation compilation, ImmutableArray<INamedTypeSymbol> endpointClasses, SourceProductionContext context)
     {
         if (endpointClasses.IsEmpty)
             return;
@@ -108,21 +179,58 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         context.AddSource("EndpointMapperExtensions.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
     }
 
-    private static string NormalizeIdentifier(string input)
+    private static void ExecuteSelectDtoGeneration(Compilation compilation, ImmutableArray<INamedTypeSymbol> selectDtoClasses, SourceProductionContext context)
     {
-        var sb = new StringBuilder();
-        foreach (char c in input)
+        if (selectDtoClasses.IsEmpty)
+            return;
+
+        var sourceBuilder = new StringBuilder();
+        sourceBuilder.AppendLine("// <auto-generated />");
+        sourceBuilder.AppendLine("using System;");
+        sourceBuilder.AppendLine("using System.Linq;");
+        sourceBuilder.AppendLine();
+
+        // Group extensions by namespace
+        var groupedByNamespace = selectDtoClasses
+            .GroupBy(c => c.ContainingNamespace.ToDisplayString())
+            .ToList();
+
+        foreach (var namespaceGroup in groupedByNamespace)
         {
-            if (char.IsLetterOrDigit(c))
-                sb.Append(c);
-            else if (c == '.' || c == '-' || c == '_')
-                sb.Append('_');
+            var namespaceName = namespaceGroup.Key;
+            sourceBuilder.AppendLine($"namespace {namespaceName}");
+            sourceBuilder.AppendLine("{");
+
+            foreach (var dtoClass in namespaceGroup)
+            {
+                // Get the GenerateSelect attribute
+                var generateSelectAttribute = dtoClass.GetAttributes()
+                    .FirstOrDefault(attr =>
+                        attr.AttributeClass?.Name == "GenerateSelectAttribute" &&
+                        attr.AttributeClass?.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
+
+                if (generateSelectAttribute == null)
+                    continue;
+
+                // Extract the entity type from the attribute constructor argument
+                if (generateSelectAttribute.ConstructorArguments.Length != 1)
+                    continue;
+
+                var entityTypeArg = generateSelectAttribute.ConstructorArguments[0];
+                if (entityTypeArg.Value is not INamedTypeSymbol entityType)
+                    continue;
+
+                var dtoClassName = dtoClass.Name;
+                var dtoFullName = dtoClass.ToDisplayString();
+                var entityFullName = entityType.ToDisplayString();
+
+                // Generate the extension method
+                SelectDtoTextGenerator.GenerateSelectDtoExtensionMethod(sourceBuilder, dtoClassName, dtoFullName, entityFullName, dtoClass, entityType);
+            }
+            sourceBuilder.AppendLine("}");
         }
 
-        var result = sb.ToString();
-        if (result.Length == 0 || !char.IsLetter(result[0]))
-            result = "Project" + result;
-
-        return result;
+        context.AddSource("SelectDtoExtensions.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
     }
+
 }
