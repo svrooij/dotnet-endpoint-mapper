@@ -1,0 +1,39 @@
+﻿
+using System.ComponentModel;
+
+namespace WebApiWithEndpointMapper.Endpoints;
+
+public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
+{
+    private static readonly IQueryable<User> Users = new List<User>
+    {
+        new User { Id = 1, Name = "Alice", Email = "alice@fakedomain.gone" },
+        new User { Id = 2, Name = "Bob", Email = "bob@fakedomain.gone" },
+        new User { Id = 3, Name = "Charlie", Email = "charlie@fakedomain.gone" }
+    }.AsQueryable();
+    public void MapEndpoint(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/users", ([Description("Query only select properties")] string? select) =>
+        {
+            var users = Users.SelectUserDto(select ?? "");
+            return Results.Ok(users);
+        })
+            .Produces<IEnumerable<UserDto>>(StatusCodes.Status200OK)
+            .WithOpenApi();
+    }
+}
+
+public class User
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public required string Email { get; set; }
+}
+
+[Svrooij.EndpointMapper.GenerateSelect(typeof(User))]
+public class UserDto
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public string? Email { get; set; }
+}
