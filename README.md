@@ -13,6 +13,7 @@ This source generator provides a simple way to organize your API endpoints into 
 - 📁 **Clean Organization**: Keep endpoints in separate files/classes
 - ⚡ **Zero Runtime Overhead**: All discovery happens at compile time
 - 🎯 **Project-Specific**: Generates unique extension methods per project
+- 📃 **Dto mapping**: In web api projects, it is very common to be able to select which fields you want to return.
 
 ## Installation
 
@@ -136,6 +137,78 @@ The generated extension method appears in IntelliSense with full type safety.
 
 ### ✅ **Performance**
 Zero runtime overhead - all reflection and discovery happens at compile time.
+
+## DTO Mapping Support
+
+If you add an attribute to your DTO with the source type, the generator will create an extension method to map from the source type to the DTO type.
+This method allows you to specify which field should be mapped, non-nullable properties are always mapped.
+
+```csharp
+// The source type
+public class User
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public required string Email { get; set; }
+}
+
+// The DTO with the attribute
+[Svrooij.EndpointMapper.GenerateSelect(typeof(User))]
+public class UserDto
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public string? Email { get; set; }
+}
+
+// This will generate the following extension method for use with Enttity Framework:
+public static IQueryable<UserDto> SelectUserDto(this IQueryable<User> query, string properties)
+// And this extension just to map individual objects
+public static UserDto SelectUserDto(this User entity, string properties)
+```
+
+These extensions are not using linq expressions but in fact pre-generated code that boils down to the following:
+
+```csharp
+/// <summary>
+/// Maps a single User instance to UserDto using a pre-parsed bitmask.
+/// This internal method is used by the IQueryable extension to avoid parsing the properties string multiple times.
+/// </summary>
+/// <param name="entity">The User instance</param>
+/// <param name="selectedProps">Bitmask of selected properties</param>
+/// <returns>A UserDto instance with selected properties populated</returns>
+internal static UserDto SelectUserDto(this WebApiWithEndpointMapper.Endpoints.User entity, long selectedProps)
+{
+    return new WebApiWithEndpointMapper.Endpoints.UserDto
+    {
+        Id = entity.Id,
+        Name = (selectedProps & NameFlag) != 0 ? entity.Name : null,
+        Email = (selectedProps & EmailFlag) != 0 ? entity.Email : null,
+    };
+}
+
+/// <summary>
+/// Parses the properties string and returns a bitmask of selected properties.
+/// </summary>
+private static long ParseProperties(string properties)
+{
+    long flags = 0;
+    if (string.IsNullOrEmpty(properties)) return flags;
+
+    var selected = new System.Collections.Generic.HashSet<string>(
+        properties
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(p => p.ToLowerInvariant())
+        .Where(p => ValidProperties.Contains(p)),
+        System.StringComparer.OrdinalIgnoreCase
+    );
+
+    if (selected.Contains("name")) flags |= NameFlag;
+    if (selected.Contains("email")) flags |= EmailFlag;
+
+    return flags;
+}
+```
 
 ## Project Structure Example
 
