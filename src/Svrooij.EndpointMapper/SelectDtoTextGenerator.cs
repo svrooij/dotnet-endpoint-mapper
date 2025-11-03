@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,6 +37,12 @@ internal static class SelectDtoTextGenerator
                 var propName = nullableProperties[i].Name;
                 sourceBuilder.AppendLine($"  private const long {propName}Flag = 1L << {i};");
             }
+            
+            // Generate a constant for all properties
+            sourceBuilder.AppendLine();
+            sourceBuilder.AppendLine("  // Bitmask with all nullable properties selected");
+            long allPropertiesMask = (1L << nullableProperties.Count) - 1;
+            sourceBuilder.AppendLine($"  private const long AllPropertiesMask = {allPropertiesMask}L;");
             sourceBuilder.AppendLine();
 
             // Generate validation array
@@ -54,9 +60,10 @@ internal static class SelectDtoTextGenerator
 
         sourceBuilder.AppendLine("  /// <summary>");
         sourceBuilder.AppendLine($"  /// Projects a query of {entityType.Name} to {dtoClassName} with selective property mapping.");
+        sourceBuilder.AppendLine("  /// Use `*` to select all properties.");
         sourceBuilder.AppendLine("  /// </summary>");
         sourceBuilder.AppendLine($"  /// <param name=\"query\">The IQueryable of {entityType.Name}</param>");
-        sourceBuilder.AppendLine("  /// <param name=\"properties\">Comma-separated property names to include (e.g., \"id,name,email\")</param>");
+        sourceBuilder.AppendLine("  /// <param name=\"properties\">Comma-separated property names to include (e.g., \"id,name,email\"), or `*` for all properties</param>");
         sourceBuilder.AppendLine($"  /// <returns>An IQueryable of {dtoClassName}</returns>");
         sourceBuilder.AppendLine($"  public static IQueryable<{dtoClassName}> Select{dtoClassName}(this IQueryable<{entityFullName}> query, string properties)");
         sourceBuilder.AppendLine("  {");
@@ -70,10 +77,12 @@ internal static class SelectDtoTextGenerator
             else
             {
                 sourceBuilder.AppendLine("    var selectedProps = new System.Collections.Generic.HashSet<string>(");
-                sourceBuilder.AppendLine("      (properties ?? string.Empty)");
-                sourceBuilder.AppendLine("        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)");
-                sourceBuilder.AppendLine("        .Select(p => p.ToLowerInvariant())");
-                sourceBuilder.AppendLine("        .Where(p => ValidProperties.Contains(p)),");
+                sourceBuilder.AppendLine("      (properties ?? string.Empty).Equals(\"*\", System.StringComparison.Ordinal)");
+                sourceBuilder.AppendLine("        ? ValidProperties");
+                sourceBuilder.AppendLine("        : (properties ?? string.Empty)");
+                sourceBuilder.AppendLine("            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)");
+                sourceBuilder.AppendLine("            .Select(p => p.ToLowerInvariant())");
+                sourceBuilder.AppendLine("            .Where(p => ValidProperties.Contains(p)),");
                 sourceBuilder.AppendLine("      System.StringComparer.OrdinalIgnoreCase");
                 sourceBuilder.AppendLine("    );");
             }
@@ -99,9 +108,10 @@ internal static class SelectDtoTextGenerator
         sourceBuilder.AppendLine();
         sourceBuilder.AppendLine("  /// <summary>");
         sourceBuilder.AppendLine($"  /// Maps a single {entityType.Name} instance to {dtoClassName} with selective property mapping.");
+        sourceBuilder.AppendLine("  /// Use `*` to select all properties.");
         sourceBuilder.AppendLine("  /// </summary>");
         sourceBuilder.AppendLine($"  /// <param name=\"entity\">The {entityType.Name} instance</param>");
-        sourceBuilder.AppendLine("  /// <param name=\"properties\">Comma-separated property names to include (e.g., \"id,name,email\")</param>");
+        sourceBuilder.AppendLine("  /// <param name=\"properties\">Comma-separated property names to include (e.g., \"id,name,email\"), or `*` for all properties</param>");
         sourceBuilder.AppendLine($"  /// <returns>A {dtoClassName} instance with selected properties populated</returns>");
         sourceBuilder.AppendLine($"  public static {dtoClassName} Select{dtoClassName}(this {entityFullName} entity, string properties)");
         sourceBuilder.AppendLine("  {");
@@ -115,10 +125,12 @@ internal static class SelectDtoTextGenerator
             else
             {
                 sourceBuilder.AppendLine("    var selectedProps = new System.Collections.Generic.HashSet<string>(");
-                sourceBuilder.AppendLine("      (properties ?? string.Empty)");
-                sourceBuilder.AppendLine("        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)");
-                sourceBuilder.AppendLine("        .Select(p => p.ToLowerInvariant())");
-                sourceBuilder.AppendLine("        .Where(p => ValidProperties.Contains(p)),");
+                sourceBuilder.AppendLine("      (properties ?? string.Empty).Equals(\"*\", System.StringComparison.Ordinal)");
+                sourceBuilder.AppendLine("        ? ValidProperties");
+                sourceBuilder.AppendLine("        : (properties ?? string.Empty)");
+                sourceBuilder.AppendLine("            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)");
+                sourceBuilder.AppendLine("            .Select(p => p.ToLowerInvariant())");
+                sourceBuilder.AppendLine("            .Where(p => ValidProperties.Contains(p)),");
                 sourceBuilder.AppendLine("      System.StringComparer.OrdinalIgnoreCase");
                 sourceBuilder.AppendLine("    );");
             }
@@ -213,9 +225,14 @@ internal static class SelectDtoTextGenerator
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("  /// <summary>");
             sourceBuilder.AppendLine("  /// Parses the properties string and returns a bitmask of selected properties.");
+            sourceBuilder.AppendLine("  /// Use `*` to select all properties.");
             sourceBuilder.AppendLine("  /// </summary>");
             sourceBuilder.AppendLine("  private static long ParseProperties(string properties)");
             sourceBuilder.AppendLine("  {");
+            sourceBuilder.AppendLine("    // Check for wildcard to select all properties");
+            sourceBuilder.AppendLine("    if ((properties ?? string.Empty).Equals(\"*\", System.StringComparison.Ordinal))");
+            sourceBuilder.AppendLine("      return AllPropertiesMask;");
+            sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("    long flags = 0;");
             sourceBuilder.AppendLine("    if (string.IsNullOrEmpty(properties)) return flags;");
             sourceBuilder.AppendLine();
