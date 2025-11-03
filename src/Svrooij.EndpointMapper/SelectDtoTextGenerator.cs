@@ -37,7 +37,7 @@ internal static class SelectDtoTextGenerator
                 var propName = nullableProperties[i].Name;
                 sourceBuilder.AppendLine($"  private const long {propName}Flag = 1L << {i};");
             }
-            
+
             // Generate a constant for all properties
             sourceBuilder.AppendLine();
             sourceBuilder.AppendLine("  // Bitmask with all nullable properties selected");
