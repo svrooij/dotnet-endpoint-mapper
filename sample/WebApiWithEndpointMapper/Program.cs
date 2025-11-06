@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using Svrooij.EndpointMapper;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,8 @@ app.MapGet("/weatherforecast", () =>
 // to truly separate your code, you can also move the endpoints to another project that references the source generator project.
 // the method will be named `MapEndpointsFrom{YourAssemblyName}`
 app.MapEndpointsFromWebApiWithEndpointMapper();
+
+app.MapScalarApiReference();
 
 app.Run();
 
