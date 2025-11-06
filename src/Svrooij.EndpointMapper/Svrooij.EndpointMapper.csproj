@@ -61,5 +61,8 @@
       <LogicalName>%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="bin\Debug\netstandard2.0\\Svrooij.EndpointMapper.dll" />
+  </ItemGroup>
 
 </Project>

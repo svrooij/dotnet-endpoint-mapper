@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis;
@@ -15,28 +15,28 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         // "Generate" code that is included in the Code folder.
         // Every file in there will be a .g.cs file in the project where this source generator is used.
         context.RegisterPostInitializationOutput(static ctx =>
+    {
+        var resources = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+        foreach (var resourceName in resources)
         {
-            var resources = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-            foreach (var resourceName in resources)
+            if (resourceName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase))
             {
-                if (resourceName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase))
+                using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+                if (stream is not null)
                 {
-                    using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
-                    if (stream is not null)
-                    {
-                        using var reader = new System.IO.StreamReader(stream);
-                        var sourceText = reader.ReadToEnd();
-                        ctx.AddSource(resourceName, sourceText);
-                    }
+                    using var reader = new System.IO.StreamReader(stream);
+                    var sourceText = reader.ReadToEnd();
+                    ctx.AddSource(resourceName, sourceText);
                 }
             }
-        });
+        }
+    });
 
         var endpointMapperDeclarations = context.SyntaxProvider
-          .CreateSyntaxProvider(
-            predicate: static (s, _) => IsSyntaxTargetForEndpointMapperGeneration(s),
-            transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
-          .Where(static m => m is not null);
+               .CreateSyntaxProvider(
+                    predicate: static (s, _) => IsSyntaxTargetForEndpointMapperGeneration(s),
+                    transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
+               .Where(static m => m is not null);
 
         var compilationAndMappings = context.CompilationProvider.Combine(endpointMapperDeclarations.Collect());
 
@@ -48,7 +48,7 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
 
 
         var selectDtoDeclarations = context.SyntaxProvider
-          .CreateSyntaxProvider(
+            .CreateSyntaxProvider(
             predicate: static (s, _) => IsSyntaxTargetForGenerateSelectGeneration(s),
             transform: static (ctx, _) => GetSemanticTargetForGenerateSelectGeneration(ctx))
           .Where(static m => m is not null);
@@ -59,6 +59,21 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         {
             var (compilation, selectDtos) = source;
             ExecuteSelectDtoGeneration(compilation, selectDtos!, spc);
+        });
+
+        // Add FluentValidation support
+        var validatorDeclarations = context.SyntaxProvider
+          .CreateSyntaxProvider(
+            predicate: static (s, _) => IsSyntaxTargetForValidatorGeneration(s),
+            transform: static (ctx, _) => GetSemanticTargetForValidatorGeneration(ctx))
+        .Where(static m => m is not null);
+
+        var compilationAndValidators = context.CompilationProvider.Combine(validatorDeclarations.Collect());
+
+        context.RegisterSourceOutput(compilationAndValidators, static (spc, source) =>
+        {
+            var (compilation, validators) = source;
+            ExecuteValidatorGeneration(compilation, validators.Cast<(INamedTypeSymbol, INamedTypeSymbol?)>().ToImmutableArray(), spc);
         });
     }
 
@@ -119,6 +134,53 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
             attr.AttributeClass?.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
 
         return hasGenerateSelectAttribute ? classSymbol : null;
+    }
+
+    private static bool IsSyntaxTargetForValidatorGeneration(SyntaxNode node)
+    {
+        if (node is not ClassDeclarationSyntax classDeclaration || classDeclaration.BaseList == null)
+            return false;
+
+        // Check if any base type contains "AbstractValidator" at syntax level
+        return classDeclaration.BaseList.Types.Any(baseType =>
+            baseType.Type.ToString().Contains("AbstractValidator"));
+    }
+
+    private static (INamedTypeSymbol, INamedTypeSymbol?)? GetSemanticTargetForValidatorGeneration(GeneratorSyntaxContext context)
+    {
+        var classDeclaration = (ClassDeclarationSyntax)context.Node;
+        var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
+
+        if (classSymbol == null)
+            return null;
+
+        // Find the AbstractValidator<T> base type or IValidator<T> interface
+        var abstractValidatorBase = classSymbol.AllInterfaces.FirstOrDefault(i =>
+        i.Name == "IValidator" &&
+        i.ContainingNamespace.ToDisplayString() == "FluentValidation" &&
+              i.TypeArguments.Length == 1);
+
+        if (abstractValidatorBase == null)
+        {
+            // Try to find it in the base classes directly
+            var baseTypes = classSymbol.BaseType;
+            while (baseTypes != null)
+            {
+                if (baseTypes.Name == "AbstractValidator" &&
+            baseTypes.ContainingNamespace.ToDisplayString() == "FluentValidation" &&
+                   baseTypes.TypeArguments.Length == 1)
+                {
+                    var dtoType = baseTypes.TypeArguments[0] as INamedTypeSymbol;
+                    return (classSymbol, dtoType);
+                }
+                baseTypes = baseTypes.BaseType;
+            }
+            return null;
+        }
+
+        // Extract the DTO type from IValidator<T>
+        var dtoType2 = abstractValidatorBase.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
+        return (classSymbol, dtoType2);
     }
 
     private static string NormalizeIdentifier(string input)
@@ -233,4 +295,53 @@ public sealed class EndpointMapperGenerator : IIncrementalGenerator
         context.AddSource("SelectDtoExtensions.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
     }
 
+    private static void ExecuteValidatorGeneration(Compilation compilation, ImmutableArray<(INamedTypeSymbol ValidatorClass, INamedTypeSymbol? DtoType)> validators, SourceProductionContext context)
+    {
+        if (validators.IsEmpty)
+            return;
+
+        var sourceBuilder = new StringBuilder();
+        sourceBuilder.AppendLine("// <auto-generated />");
+        sourceBuilder.AppendLine("using Microsoft.AspNetCore.Builder;");
+        sourceBuilder.AppendLine("using Microsoft.AspNetCore.Http;");
+        sourceBuilder.AppendLine("using FluentValidation;");
+        sourceBuilder.AppendLine("using System.Linq;");
+        sourceBuilder.AppendLine();
+
+        // Group validators by namespace
+        var groupedByNamespace = validators
+  .Where(v => v.DtoType != null)
+    .GroupBy(v => v.ValidatorClass.ContainingNamespace.ToDisplayString())
+            .ToList();
+
+        foreach (var namespaceGroup in groupedByNamespace)
+        {
+            var namespaceName = namespaceGroup.Key;
+            sourceBuilder.AppendLine($"namespace {namespaceName}");
+            sourceBuilder.AppendLine("{");
+
+            foreach (var (validatorClass, dtoType) in namespaceGroup)
+            {
+                if (dtoType == null)
+                    continue;
+
+                var validatorClassName = validatorClass.Name;
+                var validatorFullName = validatorClass.ToDisplayString();
+                var dtoClassName = dtoType.Name;
+                var dtoFullName = dtoType.ToDisplayString();
+
+                // Generate the validation filter class
+                ValidatorTextGenerator.GenerateValidationFilter(
+         sourceBuilder,
+       validatorClassName,
+         validatorFullName,
+            dtoClassName,
+            dtoFullName);
+            }
+
+            sourceBuilder.AppendLine("}");
+        }
+
+        context.AddSource("ValidationExtensions.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
+    }
 }
