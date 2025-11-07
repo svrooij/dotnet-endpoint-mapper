@@ -201,8 +201,8 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
     {
         // Allow nullable and non-nullable variants to be compatible
         // For example: string? is compatible with string
-        var dtoNonNullable = dtoType.NullableAnnotation == NullableAnnotation.Annotated ? ((INamedTypeSymbol)dtoType).TypeArguments[0] : dtoType;
-        var entityNonNullable = entityType.NullableAnnotation == NullableAnnotation.Annotated ? ((INamedTypeSymbol)entityType).TypeArguments[0] : entityType;
+        var dtoNonNullable = ExtractNonNullableType(dtoType);
+        var entityNonNullable = ExtractNonNullableType(entityType);
 
         // Check if types are equal or one is nullable version of the other
         if (SymbolEqualityComparer.Default.Equals(dtoNonNullable, entityNonNullable))
@@ -210,5 +210,26 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
 
         // Also check by name for types that might not have symbol equality
         return dtoNonNullable.ToDisplayString() == entityNonNullable.ToDisplayString();
+    }
+
+    private static ITypeSymbol ExtractNonNullableType(ITypeSymbol type)
+    {
+        // Check if this is a nullable reference type (e.g., string?)
+        if (type.NullableAnnotation == NullableAnnotation.Annotated)
+        {
+            // For nullable reference types, the type itself is what we want
+            // (the annotation is metadata, not a type argument)
+            return type;
+        }
+
+        // Check if this is a Nullable<T> value type (e.g., int?)
+        if (type is INamedTypeSymbol namedType &&
+            namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
+            namedType.TypeArguments.Length > 0)
+        {
+            return namedType.TypeArguments[0];
+        }
+
+        return type;
     }
 }

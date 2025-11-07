@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace Svrooij.EndpointMapper;
+namespace Svrooij.EndpointMapper.Generators;
 
-internal static class ValidatorTextGenerator
+internal static class ValidatorTextHelper
 {
     internal static void GenerateValidationFilter(
         StringBuilder sourceBuilder,

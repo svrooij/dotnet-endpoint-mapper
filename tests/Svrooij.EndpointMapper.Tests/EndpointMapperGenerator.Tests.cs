@@ -8,7 +8,7 @@ public class EndpointMapperGeneratorTests
     [Test]
     public async Task Generator_should_be_constructed_without_parameters()
     {
-        var generator = new EndpointMapperGenerator();
+        var generator = new EndpointMapperDiscoveryGenerator();
         await Assert.That(generator).IsNotNull();
     }
 
@@ -29,7 +29,7 @@ public class EndpointMapperGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify IMapEndpoint interface is generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results.SelectMany(r => r.GeneratedSources).ToArray();
         await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(1); // Should at least generate IMapEndpoint.g.cs
 
         var interfaceSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("IMapEndpoint"));
@@ -58,8 +58,8 @@ public class EndpointMapperGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify only IMapEndpoint interface is generated, no extension method
-        var generatedSources = result.Results[0].GeneratedSources;
-        await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(1); // Should still at least generate IMapEndpoint.g.cs
+        var generatedSources = result.Results.SelectMany(r => r.GeneratedSources).ToArray();
+        await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(2); // Should still at least generate IMapEndpoint.g.cs
 
         var interfaceSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("IMapEndpoint"));
         await Assert.That(interfaceSource.SourceText).IsNotNull();
@@ -117,7 +117,7 @@ public class EndpointMapperGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify both IMapEndpoint interface and extension method are generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results.SelectMany(r => r.GeneratedSources).ToArray();
         await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(2); // IMapEndpoint.g.cs + EndpointMapperExtensions.g.cs
 
         // Verify interface is generated
@@ -167,7 +167,7 @@ public class EndpointMapperGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify both IMapEndpoint interface and extension method are generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results.SelectMany(r => r.GeneratedSources).ToArray();
         await Assert.That(generatedSources.Length).IsGreaterThanOrEqualTo(2); // IMapEndpoint.g.cs + EndpointMapperExtensions.g.cs
 
         // Verify interface is generated
@@ -205,8 +205,9 @@ public class EndpointMapperGeneratorTests
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         // Run generator
-        var generator = new EndpointMapperGenerator();
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+        var generator = new EmbeddedResourceGenerator();
+        var endpointGenerator = new EndpointMapperDiscoveryGenerator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator, endpointGenerator);
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _);
 
         return Task.FromResult(driver.GetRunResult());

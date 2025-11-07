@@ -34,7 +34,7 @@ public class SelectDtoGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify SelectDtoExtensions are generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results[1].GeneratedSources;
         var selectDtoSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("SelectDtoExtensions"));
         await Assert.That(selectDtoSource.SourceText).IsNotNull();
 
@@ -82,7 +82,7 @@ public class SelectDtoGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify SelectDtoExtensions are NOT generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results[1].GeneratedSources;
         var selectDtoSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("SelectDtoExtensions"));
 
         // Should be empty or not exist when no [GenerateSelect] attributes found
@@ -153,7 +153,7 @@ public class SelectDtoGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify both extension classes are generated
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results[1].GeneratedSources;
         var selectDtoSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("SelectDtoExtensions"));
         await Assert.That(selectDtoSource.SourceText).IsNotNull();
 
@@ -199,7 +199,7 @@ public class SelectDtoGeneratorTests
         var result = await RunGenerator(sourceCode, "TestProject");
 
         // Assert - Verify the generated code validates property names
-        var generatedSources = result.Results[0].GeneratedSources;
+        var generatedSources = result.Results[1].GeneratedSources;
         var selectDtoSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("SelectDtoExtensions"));
         await Assert.That(selectDtoSource.SourceText).IsNotNull();
 
@@ -234,8 +234,9 @@ public class SelectDtoGeneratorTests
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         // Run generator
-        var generator = new EndpointMapperGenerator();
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+        var resourceGenerator = new EmbeddedResourceGenerator();
+        var selectDtoGenerator = new SelectDtoGenerator();
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(resourceGenerator, selectDtoGenerator);
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _);
 
         return Task.FromResult(driver.GetRunResult());
