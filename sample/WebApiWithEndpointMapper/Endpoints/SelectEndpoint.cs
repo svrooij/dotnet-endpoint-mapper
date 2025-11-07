@@ -19,7 +19,8 @@ public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
             return Results.Ok(users);
         })
             .Produces<IEnumerable<UserDto>>(StatusCodes.Status200OK)
-            .WithOpenApi();
+            .WithOpenApi()
+            .WithTags("Users");
     }
 }
 

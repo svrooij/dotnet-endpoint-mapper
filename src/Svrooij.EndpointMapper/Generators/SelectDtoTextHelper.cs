@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Svrooij.EndpointMapper;
+namespace Svrooij.EndpointMapper.Generators;
 
-internal static class SelectDtoTextGenerator
+internal static class SelectDtoTextHelper
 {
     internal static void GenerateSelectDtoExtensionMethod(StringBuilder sourceBuilder, string dtoClassName, string dtoFullName, string entityFullName, INamedTypeSymbol dtoClass, ITypeSymbol entityType)
     {
