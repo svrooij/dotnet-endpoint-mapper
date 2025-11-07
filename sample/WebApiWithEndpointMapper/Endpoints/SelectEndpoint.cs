@@ -1,5 +1,7 @@
 ﻿
 using System.ComponentModel;
+using WebApiWithEndpointMapper.Dto;
+using WebApiWithEndpointMapper.Models;
 
 namespace WebApiWithEndpointMapper.Endpoints;
 
@@ -22,19 +24,4 @@ public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
             .WithOpenApi()
             .WithTags("Users");
     }
-}
-
-public class User
-{
-    public int Id { get; set; }
-    public required string Name { get; set; }
-    public required string Email { get; set; }
-}
-
-[Svrooij.EndpointMapper.GenerateSelect(typeof(User))]
-public class UserDto
-{
-    public int Id { get; set; }
-    public string? Name { get; set; }
-    public string? Email { get; set; }
 }
