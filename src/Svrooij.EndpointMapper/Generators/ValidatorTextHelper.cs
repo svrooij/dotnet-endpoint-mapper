@@ -41,10 +41,10 @@ internal static class ValidatorTextHelper
         sourceBuilder.AppendLine($"          var errors = validationResult.Errors");
         sourceBuilder.AppendLine($"            .GroupBy(e => e.PropertyName)");
         sourceBuilder.AppendLine($"            .ToDictionary(");
-        sourceBuilder.AppendLine($"              g => g.Key,");
+        sourceBuilder.AppendLine($"              g => char.ToLowerInvariant(g.Key[0]) + g.Key.Substring(1),");
         sourceBuilder.AppendLine($"              g => g.Select(e => e.ErrorMessage).ToArray()");
         sourceBuilder.AppendLine($"            );");
-        sourceBuilder.AppendLine($"          return Results.BadRequest(errors);");
+        sourceBuilder.AppendLine($"          return Results.ValidationProblem(errors);");
         sourceBuilder.AppendLine($"        }}");
         sourceBuilder.AppendLine($"      }}");
         sourceBuilder.AppendLine($"      return await next(context);");
