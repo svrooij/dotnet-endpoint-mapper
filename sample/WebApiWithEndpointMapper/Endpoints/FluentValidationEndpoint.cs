@@ -35,7 +35,7 @@ internal class UserDtoValidator : AbstractValidator<UserDto>
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Name is required.")
-            .MinimumLength(2).WithMessage("Name must be at least 2 characters long.");
+            .MinimumLength(2);
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("A valid email is required.");
