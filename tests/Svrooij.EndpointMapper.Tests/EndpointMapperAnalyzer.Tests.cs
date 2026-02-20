@@ -44,7 +44,7 @@ public class EndpointMapperAnalyzerTests
             """;
 
         // Act - Run the analyzer
-        var diagnostics = await RunAnalyzer(sourceCode);
+        var diagnostics = await AnalyzerHelper.RunAnalyzer(sourceCode);
 
         // Assert - Verify that the diagnostic is reported
         await Assert.That(diagnostics.Length).IsEqualTo(1);
@@ -103,44 +103,9 @@ public class EndpointMapperAnalyzerTests
             """;
 
         // Act - Run the analyzer
-        var diagnostics = await RunAnalyzer(sourceCode);
+        var diagnostics = await AnalyzerHelper.RunAnalyzer(sourceCode);
 
         // Assert - Verify that no diagnostics are reported
         await Assert.That(diagnostics.Length).IsEqualTo(0);
-    }
-
-    private async Task<ImmutableArray<Diagnostic>> RunAnalyzer(string sourceCode)
-    {
-        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-
-        // Create basic references
-        var references = new List<MetadataReference>
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-        };
-
-        // Try to add ASP.NET Core references if available
-        try
-        {
-            references.Add(MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("Microsoft.AspNetCore.Routing.Abstractions").Location));
-            references.Add(MetadataReference.CreateFromFile(System.Reflection.Assembly.Load("Microsoft.AspNetCore.Http.Abstractions").Location));
-        }
-        catch
-        {
-            // Skip if not available in test environment
-        }
-
-        var compilation = CSharpCompilation.Create("TestAssembly",
-            new[] { syntaxTree },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var analyzer = new EndpointMapperAnalyzer();
-        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(analyzer);
-        var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
-
-        var diagnostics = await compilationWithAnalyzers.GetAllDiagnosticsAsync();
-        return diagnostics.Where(d => d.Id.StartsWith("SVEM")).ToImmutableArray();
     }
 }
