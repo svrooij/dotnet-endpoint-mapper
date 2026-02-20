@@ -3,22 +3,8 @@ using System;
 namespace Svrooij.EndpointMapper;
 
 /// <summary>
-/// Marks a class as a DTO that supports selective property mapping.
-/// The source generator will create extension methods for mapping from the specified entity type.
+/// Attribute to mark a class for selective property mapping from a specified entity type, see the <see cref="GenerateSelectAttribute.GenerateSelectAttribute(Type)"/> for more details.
 /// </summary>
-/// <remarks>
-/// Example usage:
-/// <code>
-/// [GenerateSelect(typeof(User))]
-/// public class UserDto
-/// {
-///     public int Id { get; set; }
-///     public string? Name { get; set; }
-/// }
-/// </code>
-/// 
-/// This generates an extension method: <c>userDto = user.SelectUserDto("id,name")</c>
-/// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class GenerateSelectAttribute : Attribute
 {
@@ -28,8 +14,23 @@ public sealed class GenerateSelectAttribute : Attribute
     public Type EntityType { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GenerateSelectAttribute"/> class.
+    /// Marks a class as an object used for selective property mapping.
     /// </summary>
+    /// <remarks>
+    /// The source generator will create extension methods for mapping from the specified entity type.
+    /// 
+    /// Example usage:
+    /// <code>
+    /// [GenerateSelect(typeof(User))]
+    /// public class UserDto
+    /// {
+    ///     public int Id { get; set; }
+    ///     public string? Name { get; set; }
+    /// }
+    /// </code>
+    /// 
+    /// This generates an extension method: <c>userDto = user.SelectUserDto("id,name")</c>
+    /// </remarks>
     /// <param name="entityType">The entity type to map from</param>
     public GenerateSelectAttribute(Type entityType)
     {
