@@ -133,10 +133,8 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
             .Where(p => p.DeclaredAccessibility == Accessibility.Public)
             .ToList();
 
-        var entityProperties = entityType.GetMembers()
-            .OfType<IPropertySymbol>()
-            .Where(p => p.DeclaredAccessibility == Accessibility.Public)
-            .ToList();
+        // Get all public properties from the entity type, including inherited properties
+        var entityProperties = GetAllPublicProperties(entityType);
 
         foreach (var dtoProp in dtoProperties)
         {
@@ -183,6 +181,26 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
                 }
             }
         }
+    }
+
+    private static List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
+    {
+        var properties = new List<IPropertySymbol>();
+        var currentType = typeSymbol;
+
+        // Walk up the inheritance chain
+        while (currentType != null)
+        {
+            var currentProperties = currentType.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(p => p.DeclaredAccessibility == Accessibility.Public);
+
+            properties.AddRange(currentProperties);
+
+            currentType = currentType.BaseType;
+        }
+
+        return properties;
     }
 
     private static bool HasParameterlessConstructor(INamedTypeSymbol classSymbol)
