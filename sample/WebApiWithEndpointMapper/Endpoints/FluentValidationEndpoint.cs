@@ -40,7 +40,7 @@ internal class UserDtoValidator : AbstractValidator<UserDto>
             .MaximumLength(100);
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
-            .Length(5,200).WithMessage("Email must be between 5 and 200 characters long.")
+            .Length(5, 200).WithMessage("Email must be between 5 and 200 characters long.")
             .EmailAddress().WithMessage("A valid email is required.");
     }
 }

@@ -71,7 +71,7 @@ public class FluentValidationSchemaTransformerGenerator : IIncrementalGenerator
                 }
 
                 sb.AppendLine("            }");
-                    
+
             }
 
             sb.AppendLine("        }");
