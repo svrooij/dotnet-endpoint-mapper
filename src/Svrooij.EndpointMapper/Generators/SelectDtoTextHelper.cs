@@ -2,11 +2,26 @@ using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Svrooij.EndpointMapper.Generators;
 
 internal static class SelectDtoTextHelper
 {
+    private static readonly Regex EntityParamRegex = new Regex(@"(?<!\w)e\.", RegexOptions.Compiled);
+
+    private static string? GetSelectExpression(IPropertySymbol property)
+    {
+        var attr = property.GetAttributes().FirstOrDefault(a =>
+            a.AttributeClass?.Name == "SelectExpressionAttribute" &&
+            a.AttributeClass?.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
+
+        if (attr == null || attr.ConstructorArguments.Length != 1)
+            return null;
+
+        return attr.ConstructorArguments[0].Value as string;
+    }
+
     internal static void GenerateSelectDtoExtensionMethod(StringBuilder sourceBuilder, string dtoClassName, string dtoFullName, string entityFullName, INamedTypeSymbol dtoClass, ITypeSymbol entityType)
     {
         // Get all properties from the DTO class
@@ -16,6 +31,7 @@ internal static class SelectDtoTextHelper
             .ToList();
 
         // Separate nullable and non-nullable properties
+        // Properties with [SelectExpression] use a custom expression; nullability still controls whether they are selectable
         var nullableProperties = dtoProperties.Where(p => p.NullableAnnotation == NullableAnnotation.Annotated).ToList();
         var nonNullableProperties = dtoProperties.Where(p => p.NullableAnnotation != NullableAnnotation.Annotated).ToList();
 
@@ -197,22 +213,26 @@ internal static class SelectDtoTextHelper
         {
             var propName = prop.Name;
             var isNonNullable = nonNullableProperties.Any(p => p.Name == propName);
+            var selectExpression = GetSelectExpression(prop);
+            var valueExpression = selectExpression != null
+                ? EntityParamRegex.Replace(selectExpression, "entity.")
+                : $"entity.{propName}";
 
             if (isNonNullable)
             {
                 // Non-nullable: always include
-                sourceBuilder.AppendLine($"      {propName} = entity.{propName},");
+                sourceBuilder.AppendLine($"      {propName} = {valueExpression},");
             }
             else if (useBitmask)
             {
                 // Nullable with bitmask
                 int flagIndex = nullableProperties.FindIndex(p => p.Name == propName);
-                sourceBuilder.AppendLine($"      {propName} = (selectedProps & {propName}Flag) != 0 ? entity.{propName} : null,");
+                sourceBuilder.AppendLine($"      {propName} = (selectedProps & {propName}Flag) != 0 ? {valueExpression} : null,");
             }
             else
             {
                 // Nullable with HashSet fallback
-                sourceBuilder.AppendLine($"      {propName} = selectedProps.Contains(\"{propName.ToLowerInvariant()}\") ? entity.{propName} : null,");
+                sourceBuilder.AppendLine($"      {propName} = selectedProps.Contains(\"{propName.ToLowerInvariant()}\") ? {valueExpression} : null,");
             }
         }
 

@@ -214,6 +214,58 @@ public class SelectDtoGeneratorTests
         await Assert.That(generatedText).Contains(".Where(p => ValidProperties.Contains(p))");
     }
 
+    [Test]
+    public async Task Generator_should_use_SelectExpression_when_attribute_is_applied()
+    {
+        // Arrange - DTO with a [SelectExpression] on a property that has no counterpart on the entity
+        var sourceCode = """
+            using Svrooij.EndpointMapper;
+
+            namespace TestProject;
+
+            public class Order
+            {
+                public int Id { get; set; }
+                public string CustomerName { get; set; } = string.Empty;
+                public decimal SubTotal { get; set; }
+                public decimal Tax { get; set; }
+            }
+
+            [GenerateSelect(typeof(Order))]
+            public class OrderDto
+            {
+                public int Id { get; set; }
+
+                // Always-computed non-nullable: no matching property on Order
+                [SelectExpression("e.SubTotal + e.Tax")]
+                public decimal TotalPrice { get; set; }
+
+                // Selectable nullable computed property
+                [SelectExpression("e.CustomerName.ToUpper()")]
+                public string? CustomerDisplay { get; set; }
+            }
+            """;
+
+        // Act
+        var result = await RunGenerator(sourceCode, "TestProject");
+
+        // Assert
+        var generatedSources = result.Results[1].GeneratedSources;
+        var selectDtoSource = generatedSources.FirstOrDefault(s => s.HintName.Contains("SelectDtoExtensions"));
+        await Assert.That(selectDtoSource.SourceText).IsNotNull();
+
+        var generatedText = selectDtoSource.SourceText.ToString();
+
+        // Non-nullable computed property uses the expression directly (always included)
+        await Assert.That(generatedText).Contains("TotalPrice = entity.SubTotal + entity.Tax,");
+
+        // Nullable computed property uses the expression behind the bitmask guard
+        await Assert.That(generatedText).Contains("CustomerDisplay = (selectedProps & CustomerDisplayFlag) != 0 ? entity.CustomerName.ToUpper() : null,");
+
+        // The computed nullable property must be in ValidProperties so it can be requested by name
+        await Assert.That(generatedText).Contains("\"customerdisplay\"");
+    }
+
     private Task<GeneratorDriverRunResult> RunGenerator(string sourceCode, string assemblyName)
     {
         // Parse source code
