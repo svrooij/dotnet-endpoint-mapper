@@ -138,6 +138,14 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
 
         foreach (var dtoProp in dtoProperties)
         {
+            // Properties with [SelectExpression] provide their own mapping expression — skip validation
+            var hasSelectExpression = dtoProp.GetAttributes().Any(a =>
+                a.AttributeClass?.Name == "SelectExpressionAttribute" &&
+                a.AttributeClass?.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
+
+            if (hasSelectExpression)
+                continue;
+
             // Find matching property on entity
             var entityProp = entityProperties.FirstOrDefault(p =>
                 p.Name.Equals(dtoProp.Name, System.StringComparison.OrdinalIgnoreCase));
