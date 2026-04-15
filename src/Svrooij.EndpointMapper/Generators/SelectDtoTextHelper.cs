@@ -2,11 +2,14 @@ using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Svrooij.EndpointMapper.Generators;
 
 internal static class SelectDtoTextHelper
 {
+    private static readonly Regex EntityParamRegex = new Regex(@"(?<!\w)e\.", RegexOptions.Compiled);
+
     private static string? GetSelectExpression(IPropertySymbol property)
     {
         var attr = property.GetAttributes().FirstOrDefault(a =>
@@ -211,7 +214,9 @@ internal static class SelectDtoTextHelper
             var propName = prop.Name;
             var isNonNullable = nonNullableProperties.Any(p => p.Name == propName);
             var selectExpression = GetSelectExpression(prop);
-            var valueExpression = selectExpression != null ? selectExpression.Replace("e.", "entity.") : $"entity.{propName}";
+            var valueExpression = selectExpression != null
+                ? EntityParamRegex.Replace(selectExpression, "entity.")
+                : $"entity.{propName}";
 
             if (isNonNullable)
             {
