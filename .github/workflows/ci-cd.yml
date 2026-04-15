@@ -51,7 +51,7 @@ jobs:
 
     # TUnit upload artifacts automatically https://tunit.dev/docs/guides/html-report/#enabling-automatic-artifact-upload
     - name: Expose GitHub Actions Runtime
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         script: |
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env['ACTIONS_RUNTIME_TOKEN']);
