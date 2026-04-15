@@ -143,14 +143,14 @@ public class FluentValidationSchemaTransformerGenerator : IIncrementalGenerator
                 var lambdaArg = call.ArgumentList.Arguments[0];
                 if (!(lambdaArg.Expression is LambdaExpressionSyntax lambda)) continue;
 
-                string propName = null;
+                string? propName = null;
                 if (lambda.Body is MemberAccessExpressionSyntax member)
                     propName = member.Name.Identifier.ValueText;
 
                 if (string.IsNullOrEmpty(propName)) continue;
 
                 var (minLen, maxLen, isEmail, isRequired) = AnalyzeValidationChain(call);
-                rules.Add((propName, minLen, maxLen, isEmail, isRequired));
+                rules.Add((propName!, minLen, maxLen, isEmail, isRequired));
             }
         }
 
