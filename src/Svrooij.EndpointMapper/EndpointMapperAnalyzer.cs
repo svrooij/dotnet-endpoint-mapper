@@ -133,10 +133,8 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
             .Where(p => p.DeclaredAccessibility == Accessibility.Public)
             .ToList();
 
-        var entityProperties = entityType.GetMembers()
-            .OfType<IPropertySymbol>()
-            .Where(p => p.DeclaredAccessibility == Accessibility.Public)
-            .ToList();
+        // Get all public properties from the entity type, including inherited properties
+        var entityProperties = GetAllPublicProperties(entityType);
 
         foreach (var dtoProp in dtoProperties)
         {
@@ -185,6 +183,26 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    private static List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
+    {
+        var properties = new List<IPropertySymbol>();
+        var currentType = typeSymbol;
+
+        // Walk up the inheritance chain
+        while (currentType != null)
+        {
+            var currentProperties = currentType.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(p => p.DeclaredAccessibility == Accessibility.Public);
+
+            properties.AddRange(currentProperties);
+
+            currentType = currentType.BaseType;
+        }
+
+        return properties;
+    }
+
     private static bool HasParameterlessConstructor(INamedTypeSymbol classSymbol)
     {
         // If no constructors are explicitly declared, C# provides an implicit parameterless constructor
@@ -214,20 +232,18 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
 
     private static ITypeSymbol ExtractNonNullableType(ITypeSymbol type)
     {
-        // Check if this is a nullable reference type (e.g., string?)
-        if (type.NullableAnnotation == NullableAnnotation.Annotated)
-        {
-            // For nullable reference types, the type itself is what we want
-            // (the annotation is metadata, not a type argument)
-            return type;
-        }
-
         // Check if this is a Nullable<T> value type (e.g., int?)
         if (type is INamedTypeSymbol namedType &&
             namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
             namedType.TypeArguments.Length > 0)
         {
             return namedType.TypeArguments[0];
+        }
+
+        // Check if this is a nullable reference type (e.g., string?)
+        if (type.NullableAnnotation == NullableAnnotation.Annotated)
+        {
+            return type.WithNullableAnnotation(NullableAnnotation.None);
         }
 
         return type;

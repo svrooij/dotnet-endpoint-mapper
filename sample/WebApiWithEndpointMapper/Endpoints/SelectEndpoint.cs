@@ -9,9 +9,9 @@ public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
 {
     private static readonly IQueryable<User> Users = new List<User>
     {
-        new User { Id = 1, Name = "Alice", Email = "alice@fakedomain.gone" },
-        new User { Id = 2, Name = "Bob", Email = "bob@fakedomain.gone" },
-        new User { Id = 3, Name = "Charlie", Email = "charlie@fakedomain.gone" }
+        new User { Id = 1, Name = "Alice", Email = "alice@fakedomain.gone", UserLevel = 2 },
+        new User { Id = 2, Name = "Bob", Email = "bob@fakedomain.gone", UserLevel = 3 },
+        new User { Id = 3, Name = "Charlie", Email = "charlie@fakedomain.gone"}
     }.AsQueryable();
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
@@ -25,3 +25,4 @@ public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
             .WithTags("Users");
     }
 }
+
