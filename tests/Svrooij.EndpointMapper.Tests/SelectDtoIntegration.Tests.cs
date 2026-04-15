@@ -210,7 +210,8 @@ public class SelectDtoIntegrationTests
             .ToList();
 
         // Assert - All products mapped correctly with selective properties
-        await Assert.That(results).HasCount(3);
+        await Assert.That(results).IsNotNull();
+        await Assert.That(results!.Count).IsEqualTo(3);
         await Assert.That(results[0].Name).IsEqualTo("Laptop");
         await Assert.That(results[1].Price).IsEqualTo(25m);
         await Assert.That(results[2].Id).IsEqualTo(3);

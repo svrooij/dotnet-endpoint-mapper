@@ -161,6 +161,82 @@ public class UserDtoValidator : AbstractValidator<UserDto>
 > [!INFO]
 > See the [complete example](https://github.com/svrooij/dotnet-endpoint-mapper/blob/main/sample/WebApiWithEndpointMapper/Endpoints/FluentValidationEndpoint.cs) for more details.
 
+#### FluentValidation schema generation
+
+In addition to generating filters, the source generator also produces OpenAPI schema definitions for your validators. This means that your API documentation will automatically include validation rules, making it easier for clients to understand how to interact with your endpoints.
+The following code (using the `GenerateSchema` attribute) will automatically generate an OpenAPI schema for the `UserDto` based on the rules defined in the `UserDtoValidator`. You have to add the `SchemaTransformer` to your OpenAPI configuration.
+
+```csharp
+[Svrooij.EndpointMapper.GenerateSchema(typeof(UserDtoValidator))]
+public class UserDto
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+}
+
+internal class UserDtoValidator : AbstractValidator<UserDto>
+{
+    public UserDtoValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Name is required.")
+            .MinimumLength(2).WithMessage("Name must be at least 2 characters long.")
+            .MaximumLength(100);
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .Length(5,200).WithMessage("Email must be between 5 and 200 characters long.")
+            .EmailAddress().WithMessage("A valid email is required.");
+    }
+}
+```
+
+Add the `SchemaTransformer` to your OpenAPI configuration:
+
+```csharp
+builder.Services.AddOpenApi(api =>
+{
+    api.AddSchemaTransformer<WebApiWithEndpointMapper.Dto.FluentValidationSchemaTransformer>();
+});
+```
+
+Code generated:
+
+```csharp
+public class FluentValidationSchemaTransformer : IOpenApiSchemaTransformer
+{
+    public Task TransformAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context, CancellationToken cancellationToken)
+    {
+        string? key = null;
+        if (context.JsonTypeInfo.Type == typeof(WebApiWithEndpointMapper.Dto.UserDto))
+        {
+            key = null;
+
+            key = schema.Properties.Keys.FirstOrDefault(k => k.Equals("Name", StringComparison.OrdinalIgnoreCase));
+            if (key != null)
+            {
+              schema.Properties[key].MinLength = 2;
+              schema.Properties[key].MaxLength = 100;
+              schema.Properties[key].Nullable = false;
+              schema.Required.Add(key);
+            }
+
+            key = schema.Properties.Keys.FirstOrDefault(k => k.Equals("Email", StringComparison.OrdinalIgnoreCase));
+            if (key != null)
+            {
+              schema.Properties[key].Format = "email";
+              schema.Properties[key].MinLength = 5;
+              schema.Properties[key].MaxLength = 200;
+              schema.Properties[key].Nullable = false;
+              schema.Required.Add(key);
+            }
+        }
+        return Task.CompletedTask;
+    }
+}
+```
+
 ## Examples & Samples
 
 Want to see it in action? Check out the [complete sample project](https://github.com/svrooij/dotnet-endpoint-mapper/tree/main/sample/WebApiWithEndpointMapper) with:
