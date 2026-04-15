@@ -1,10 +1,14 @@
 using Scalar.AspNetCore;
 using Svrooij.EndpointMapper;
+using WebApiWithEndpointMapper;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(api =>
+{
+    api.AddSchemaTransformer<WebApiWithEndpointMapper.Dto.FluentValidationSchemaTransformer>();
+});
 
 // Configure JSON serializer to skip default values
 builder.Services.ConfigureHttpJsonOptions(options =>
