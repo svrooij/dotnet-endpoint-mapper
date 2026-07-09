@@ -11,7 +11,7 @@ public class SelectEndpoint : Svrooij.EndpointMapper.IMapEndpoint
         new User { Id = 2, Name = "Bob", Email = "bob@fakedomain.gone", UserLevel = 3 },
         new User { Id = 3, Name = "Charlie", Email = "charlie@fakedomain.gone"}
     }.AsQueryable();
-    public void MapEndpoint(IEndpointRouteBuilder app)
+    public static void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapGet("/users", ([Description("Query only select properties")] string? select) =>
         {

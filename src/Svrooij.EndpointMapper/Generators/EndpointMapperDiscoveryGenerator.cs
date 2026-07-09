@@ -103,7 +103,7 @@ public sealed class EndpointMapperDiscoveryGenerator : IIncrementalGenerator
         foreach (var endpointClass in endpointClasses)
         {
             var fullTypeName = endpointClass.ToDisplayString();
-            sourceBuilder.AppendLine($"    new {fullTypeName}().MapEndpoint(app);");
+            sourceBuilder.AppendLine($"    {fullTypeName}.MapEndpoint(app);");
         }
 
         sourceBuilder.AppendLine("    return app;");
