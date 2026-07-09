@@ -10,15 +10,6 @@ namespace Svrooij.EndpointMapper;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class EndpointMapperAnalyzer : DiagnosticAnalyzer
 {
-    public static readonly DiagnosticDescriptor MissingParameterlessConstructor = new DiagnosticDescriptor(
-        id: "SVEM001",
-        title: "IMapEndpoint implementation must have a parameterless constructor",
-        messageFormat: "Class '{0}' implements IMapEndpoint but does not have a parameterless constructor. The source generator requires a parameterless constructor to instantiate endpoint classes.",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "Classes implementing IMapEndpoint must have a parameterless constructor so they can be instantiated by the generated code.",
-        helpLinkUri: "https://github.com/svrooij/dotnet-endpoint-mapper#usage");
 
     public static readonly DiagnosticDescriptor GenerateSelectMissingParameterlessConstructor = new DiagnosticDescriptor(
         id: "SVEM002",
@@ -42,7 +33,6 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(
-            MissingParameterlessConstructor,
             GenerateSelectMissingParameterlessConstructor,
             GenerateSelectMissingSourceProperty);
 
@@ -61,16 +51,6 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
         if (classSymbol == null)
             return;
 
-        // Check if the class implements IMapEndpoint
-        var implementsIMapEndpoint = classSymbol.AllInterfaces.Any(i =>
-            i.Name == "IMapEndpoint" &&
-            i.ContainingNamespace.ToDisplayString() == "Svrooij.EndpointMapper");
-
-        if (implementsIMapEndpoint)
-        {
-            AnalyzeIMapEndpoint(context, classDeclaration, classSymbol);
-        }
-
         // Check if the class has GenerateSelect attribute
         var hasGenerateSelectAttribute = classSymbol.GetAttributes().Any(attr =>
             attr.AttributeClass?.Name == "GenerateSelectAttribute" &&
@@ -79,22 +59,6 @@ public class EndpointMapperAnalyzer : DiagnosticAnalyzer
         if (hasGenerateSelectAttribute)
         {
             AnalyzeGenerateSelect(context, classDeclaration, classSymbol);
-        }
-    }
-
-    private static void AnalyzeIMapEndpoint(SyntaxNodeAnalysisContext context, ClassDeclarationSyntax classDeclaration, INamedTypeSymbol classSymbol)
-    {
-        // Check if the class has a parameterless constructor
-        var hasParameterlessConstructor = HasParameterlessConstructor(classSymbol);
-
-        if (!hasParameterlessConstructor)
-        {
-            var diagnostic = Diagnostic.Create(
-                MissingParameterlessConstructor,
-                classDeclaration.Identifier.GetLocation(),
-                classSymbol.Name);
-
-            context.ReportDiagnostic(diagnostic);
         }
     }
 

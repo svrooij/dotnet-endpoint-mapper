@@ -37,7 +37,7 @@ public class EndpointMapperGeneratorTests
 
         var generatedText = interfaceSource.SourceText.ToString();
         await Assert.That(generatedText).Contains("interface IMapEndpoint");
-        await Assert.That(generatedText).Contains("void MapEndpoint(IEndpointRouteBuilder app)");
+        await Assert.That(generatedText).Contains("static abstract void MapEndpoint(IEndpointRouteBuilder app)");
         await Assert.That(generatedText).Contains("namespace Svrooij.EndpointMapper");
     }
 
@@ -76,36 +76,36 @@ public class EndpointMapperGeneratorTests
         // Arrange - Create source code with multiple endpoint implementations
         var sourceCode = """
             using Microsoft.AspNetCore.Routing;
-            
+
             namespace TestProject.Endpoints {
-            
+
                 public class WeatherEndpoint : Svrooij.EndpointMapper.IMapEndpoint
                 {
-                    public void MapEndpoint(IEndpointRouteBuilder app)
+                    public static void MapEndpoint(IEndpointRouteBuilder app)
                     {
                         app.MapGet("/weather", () => "Sunny");
                     }
                 }
-                
+
                 public class UserEndpoint : Svrooij.EndpointMapper.IMapEndpoint
                 {
-                    public void MapEndpoint(IEndpointRouteBuilder app)
+                    public static void MapEndpoint(IEndpointRouteBuilder app)
                     {
                         app.MapGet("/users", () => new[] { "Alice", "Bob" });
                     }
                 }
             }
-            
+
             namespace TestProject.Other {
-            
+
                 public class ProductEndpoint : Svrooij.EndpointMapper.IMapEndpoint
                 {
-                    public void MapEndpoint(IEndpointRouteBuilder app)
+                    public static void MapEndpoint(IEndpointRouteBuilder app)
                     {
                         app.MapGet("/products", () => new[] { "Laptop", "Phone" });
                     }
                 }
-                
+
                 public class RegularClass
                 {
                     public void SomeMethod() { }
@@ -133,9 +133,9 @@ public class EndpointMapperGeneratorTests
         await Assert.That(extensionText).Contains("public static WebApplication MapEndpointsFromTestProject(this WebApplication app)");
 
         // Verify all three endpoint classes are registered
-        await Assert.That(extensionText).Contains("new TestProject.Endpoints.WeatherEndpoint().MapEndpoint(app);");
-        await Assert.That(extensionText).Contains("new TestProject.Endpoints.UserEndpoint().MapEndpoint(app);");
-        await Assert.That(extensionText).Contains("new TestProject.Other.ProductEndpoint().MapEndpoint(app);");
+        await Assert.That(extensionText).Contains("TestProject.Endpoints.WeatherEndpoint.MapEndpoint(app);");
+        await Assert.That(extensionText).Contains("TestProject.Endpoints.UserEndpoint.MapEndpoint(app);");
+        await Assert.That(extensionText).Contains("TestProject.Other.ProductEndpoint.MapEndpoint(app);");
 
         await Assert.That(extensionText).Contains("return app;");
     }
@@ -146,17 +146,17 @@ public class EndpointMapperGeneratorTests
         // Arrange - Create source code with a single endpoint implementation
         var sourceCode = """
             using Microsoft.AspNetCore.Routing;
-            
+
             namespace TestProject.Endpoints;
-            
+
             public class WeatherEndpoint : Svrooij.EndpointMapper.IMapEndpoint
             {
-                public void MapEndpoint(IEndpointRouteBuilder app)
+                public static void MapEndpoint(IEndpointRouteBuilder app)
                 {
                     app.MapGet("/weather", () => "Sunny");
                 }
             }
-            
+
             public class RegularClass
             {
                 public void SomeMethod() { }
@@ -181,7 +181,7 @@ public class EndpointMapperGeneratorTests
         var extensionText = extensionSource.SourceText.ToString();
         await Assert.That(extensionText).Contains("MapEndpointsFromTestProject");
         await Assert.That(extensionText).Contains("public static WebApplication MapEndpointsFromTestProject(this WebApplication app)");
-        await Assert.That(extensionText).Contains("new TestProject.Endpoints.WeatherEndpoint().MapEndpoint(app);");
+        await Assert.That(extensionText).Contains("TestProject.Endpoints.WeatherEndpoint.MapEndpoint(app);");
         await Assert.That(extensionText).Contains("return app;");
     }
 
