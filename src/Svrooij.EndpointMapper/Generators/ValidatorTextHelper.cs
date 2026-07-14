@@ -15,6 +15,7 @@ internal static class ValidatorTextHelper
         sourceBuilder.AppendLine($"  /// <summary>");
         sourceBuilder.AppendLine($"  /// Validation filter for {dtoClassName} using {validatorClassName}.");
         sourceBuilder.AppendLine($"  /// </summary>");
+        sourceBuilder.AppendLine(GeneratorConstants.ExcludeFromCodeCoverageAttributes("  "));
         sourceBuilder.AppendLine($"  internal class {validatorClassName}Filter : IEndpointFilter");
         sourceBuilder.AppendLine($"  {{");
         sourceBuilder.AppendLine($"    private readonly IValidator<{dtoFullName}> _validator;");
@@ -56,6 +57,7 @@ internal static class ValidatorTextHelper
         sourceBuilder.AppendLine($"  /// <summary>");
         sourceBuilder.AppendLine($"  /// Extension method to add validation filter for {dtoClassName}.");
         sourceBuilder.AppendLine($"  /// </summary>");
+        sourceBuilder.AppendLine(GeneratorConstants.ExcludeFromCodeCoverageAttributes("  "));
         sourceBuilder.AppendLine($"  internal static class {validatorClassName}Extensions");
         sourceBuilder.AppendLine($"  {{");
         sourceBuilder.AppendLine($"    /// <summary>");

@@ -6,6 +6,8 @@ namespace Svrooij.EndpointMapper;
 /// Attribute to mark a class for selective property mapping from a specified entity type, see the <see cref="GenerateSelectAttribute.GenerateSelectAttribute(Type)"/> for more details.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[global::System.CodeDom.Compiler.GeneratedCode("Svrooij.EndpointMapper", "1.0.0")]
 public sealed class GenerateSelectAttribute : Attribute
 {
     /// <summary>

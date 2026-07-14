@@ -25,6 +25,7 @@ public sealed class EmbeddedResourceGenerator : IIncrementalGenerator
                     {
                         using var reader = new System.IO.StreamReader(stream);
                         var sourceText = reader.ReadToEnd();
+                        sourceText = sourceText.Replace("\"1.0.0\"", $"\"{Generators.GeneratorConstants.GeneratorVersion}\"");
                         ctx.AddSource(resourceName, sourceText);
                     }
                 }

@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Svrooij.EndpointMapper.Generators;
 
 namespace Svrooij.EndpointMapper;
 
@@ -90,6 +91,7 @@ public sealed class EndpointMapperDiscoveryGenerator : IIncrementalGenerator
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Extension methods to map all endpoints from assembly '{assemblyName}'.");
         sourceBuilder.AppendLine("/// </summary>");
+        sourceBuilder.AppendLine(GeneratorConstants.ExcludeFromCodeCoverageAttributes());
         sourceBuilder.AppendLine($"public static class {normalizedAssemblyName}EndpointMapperExtensions");
         sourceBuilder.AppendLine("{");
         sourceBuilder.AppendLine("  /// <summary>");
