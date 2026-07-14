@@ -31,6 +31,7 @@ namespace Svrooij.EndpointMapper;
 /// </code>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+[global::System.CodeDom.Compiler.GeneratedCode("Svrooij.EndpointMapper", "1.0.0")]
 public sealed class SelectExpressionAttribute : Attribute
 {
     /// <summary>
