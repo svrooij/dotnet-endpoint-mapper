@@ -41,6 +41,7 @@ internal static class SelectDtoTextHelper
         sourceBuilder.AppendLine("/// <summary>");
         sourceBuilder.AppendLine($"/// Maps {entityType.Name} instances to {dtoClassName}, selecting only specified properties.");
         sourceBuilder.AppendLine("/// </summary>");
+        sourceBuilder.AppendLine(GeneratorConstants.ExcludeFromCodeCoverageAttributes());
         sourceBuilder.AppendLine($"public static class {dtoClassName}Extensions");
         sourceBuilder.AppendLine("{");
 

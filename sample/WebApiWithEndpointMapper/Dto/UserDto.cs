@@ -4,7 +4,6 @@ using WebApiWithEndpointMapper.Models;
 namespace WebApiWithEndpointMapper.Dto;
 
 [Svrooij.EndpointMapper.GenerateSelect(typeof(User))]
-[Svrooij.EndpointMapper.GenerateSchema(typeof(UserDtoValidator))]
 public class UserDto
 {
     public int Id { get; set; }

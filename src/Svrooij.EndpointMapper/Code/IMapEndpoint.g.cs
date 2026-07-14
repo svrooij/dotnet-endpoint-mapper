@@ -4,6 +4,7 @@ namespace Svrooij.EndpointMapper
   /// <summary>
   /// Implement this interface on a class to have its endpoint(s) mapped by the source generator.
   /// </summary>
+  [global::System.CodeDom.Compiler.GeneratedCode("Svrooij.EndpointMapper", "1.0.0")]
   internal interface IMapEndpoint
   {
     /// <summary>
